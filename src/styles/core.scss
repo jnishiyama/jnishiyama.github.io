@@ -1,5 +1,8 @@
 @import 'base';
+@import 'fontface';
 @import '~normalize.css/normalize';
+
+@include font-face("abyssopelagic", "./abyssopelagic", otf);
 
 // Some best-practice CSS that's useful for most apps
 // Just remove them if they're not what you want
@@ -18,4 +21,5 @@ body {
 *:before,
 *:after {
   box-sizing: inherit;
+  font-family: "abyssopelagic";
 }

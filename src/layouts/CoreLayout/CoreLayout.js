@@ -1,15 +1,22 @@
 import React from 'react'
-import Header from '../../components/Header'
-import './CoreLayout.scss'
 import '../../styles/core.scss'
+import styled from 'styled-components'
+
+const Wrapper = styled.section`
+  height: 100%;
+  background: black;
+`
+
+const RouteWrapper = styled.section`
+  height: 100%;
+`
 
 export const CoreLayout = ({ children }) => (
-  <div className='container text-center'>
-    <Header />
-    <div className='core-layout__viewport'>
+  <Wrapper>
+    <RouteWrapper>
       {children}
-    </div>
-  </div>
+    </RouteWrapper>
+  </Wrapper>
 )
 
 CoreLayout.propTypes = {
