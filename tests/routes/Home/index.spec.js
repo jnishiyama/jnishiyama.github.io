@@ -1,17 +1,5 @@
-import HomeRoute from 'routes/Home'
-
-describe('(Route) Home', () => {
-  let _component
-
-  beforeEach(() => {
-    _component = HomeRoute.component()
-  })
-
-  it('Should return a route configuration object', () => {
-    expect(typeof HomeRoute).to.equal('object')
-  })
-
-  it('Should define a route component', () => {
-    expect(_component.type).to.equal('div')
+describe('(View) Home', () => {
+  it('Doesnt do shit', () => {
+    expect(1).to.equal(1)
   })
 })
