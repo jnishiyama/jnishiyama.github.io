@@ -18,11 +18,9 @@ export function resetUiState(action) {
 
 /*  Thunk it up
 */
-
 // has side efffects so it gets thunked up
 export const rewind = () => {
   return (dispatch, getState) => {
-
     // get Action Log from state
     let state = getState()
 
@@ -31,8 +29,8 @@ export const rewind = () => {
 
     // essentially pop the actions
     // increase timeout time so that we can see each movement
-    for (let i in actionLog){
-      let incremental = 30
+    for (let i in actionLog) {
+      let incremental = 200
       setTimeout(() => {
         dispatch(
           {
@@ -54,23 +52,23 @@ export const rewind = () => {
 }
 
 export const actions = {
-  rewind,
+  rewind
 }
 
 // Take the mount state and use it to create our initial
 // ui actions. This is sothat we can reset to initial state
-// programattically 
+// programattically
 const _initializeActionLog = (payload) => {
   return Object.keys(payload.defaults).map(
     (e) => (
       {
         type: UPDATE_UI_STATE,
-        payload:{
+        payload: {
           key: payload.key,
           name: e,
           value: {
             x: payload.defaults[e].x,
-            y: payload.defaults[e].y,
+            y: payload.defaults[e].y
           }
         }
       }
@@ -83,7 +81,7 @@ const _initializeActionLog = (payload) => {
 // ------------------------------------
 const ACTION_HANDLERS = {
   [UPDATE_UI_STATE] : (state, action) => {
-    if (action.ignore === true){
+    if (action.ignore === true) {
       return state
     }
     const actionLog = [ ...state.actionLog ]
