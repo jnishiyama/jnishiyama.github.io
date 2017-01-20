@@ -95,9 +95,9 @@ export const Home = (props) => (
         props.actionLog.map(
           (e, index) => (
             <div key={index}>
-              <span>Letter: {goose[e.payload.name]}</span>
-              <span>X: {e.payload.value.x}</span>
-              <span>Y: {e.payload.value.y}</span>
+              <p>Letter: {goose[e.payload.name]} </p>
+              <p>X: {e.payload.value.x} </p>
+              <p>Y: {e.payload.value.y} </p>
             </div>
           )
         )
