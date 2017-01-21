@@ -1,5 +1,6 @@
 import { connect } from 'react-redux'
 import { rewind } from '../modules/home'
+import { getActions } from '../selectors/home'
 
 /*  This is a container component. Notice it does not contain any JSX,
     nor does it import React. This component is **only** responsible for
@@ -18,7 +19,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state) => (
   {
-    actionLog: state.home.actionLog
+    actions: getActions(state)
   }
 )
 

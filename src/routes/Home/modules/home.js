@@ -1,3 +1,6 @@
+import update from 'immutability-helper'
+import { getActions } from '../selectors/home'
+
 // ------------------------------------
 // Constants
 // ------------------------------------
@@ -5,10 +8,18 @@ export const UPDATE_UI_STATE = '@@redux-ui/UPDATE_UI_STATE'
 export const RESET_ACTION_LOG = 'RESET_ACTION_LOG'
 export const MOUNT_UI_STATE = '@@redux-ui/MOUNT_UI_STATE'
 
+// Just generate autoincrementing ids
+let autoId = 0
+const getAutoId = (index) => {
+  if (index !== undefined) {
+    autoId = index
+  }
+  return autoId++
+}
+
 // ------------------------------------
 // Actions
 // ------------------------------------
-
 export function resetUiState(action) {
   return {
     type    : RESET_ACTION_LOG,
@@ -22,39 +33,41 @@ export function resetUiState(action) {
 export const rewind = () => {
   return (dispatch, getState) => {
     // get Action Log from state
-    let state = getState()
+    const state = getState()
 
     // flip it and reverse it
-    let actionLog = [ ...state.home.actionLog ].reverse()
-      console.log("dthea")
+    const actions = getActions(state).reverse()
 
-    // essentially pop the actions
-    // increase timeout time so that we can see each movement
-    let counter = 0
-    for (let i in actionLog) {
-      let incremental = 200
+    // get the Diff times
+    const diffTimes = [ ...state.home.initialHash.diffTimes ].reverse()
+    const initialHash = state.home.initialHash
 
-      let uiX = state.ui.get(state.home.homeUiKey).get(actionLog[i].payload.name).x
-      let payloadX = actionLog[i].payload.value.x
+    // set initial timeout to 0
+    let cumulTime = 0
 
-      let uiY = state.ui.get(state.home.homeUiKey).get(actionLog[i].payload.name).y
-      let payloadY = actionLog[i].payload.value.y
-      if (uiX === payloadX && uiY === payloadY) {
+    for (let i in actions) {
+      let action = actions[i]
+
+      // console.log(cumulTime)
+      if (initialHash[action.payload.name].latest.id === action.id) {
         continue
       }
+
+      // pop the diff and add to cumulative timeout
+      cumulTime += diffTimes.pop()
       setTimeout(
         () => {
+          // dispatch redux ui action
           dispatch(
             {
-              type: actionLog[i].type,
-              payload: actionLog[i].payload,
+              type: action.type,
+              payload: action.payload,
               ignore: true
             }
           )
         },
-        incremental * counter
+        cumulTime
       )
-      counter++
     }
 
     // finally reset Action log
@@ -70,6 +83,10 @@ export const actions = {
   rewind
 }
 
+// ------------------------------------
+// Utilities
+// ------------------------------------
+
 // Take the mount state and use it to create our initial
 // ui actions. This is sothat we can reset to initial state
 // programattically
@@ -79,15 +96,46 @@ const _initializeActionLog = (payload) => {
       {
         type: UPDATE_UI_STATE,
         payload: {
-          key: payload.key,
+          key: 'homies',
           name: e,
           value: {
             x: payload.defaults[e].x,
             y: payload.defaults[e].y
           }
+        },
+        timestamp: Date.now()
+      }
+    )
+  )
+}
+
+// create hash that will give us latest action
+// by payload name, the initial action, and
+// keep a record of the time between actions
+const createInitialHash = (actions) => {
+  return Object.assign(...actions.map(
+      (action) => {
+        return {
+          [action.payload.name]: {
+            latest: undefined,
+            initialAction: { ...action, id: getAutoId() }
+          },
+          diffTimes: []
         }
       }
     )
+  )
+}
+
+// get the time diff
+const getDiffTime = (newTimestamp, actionLogEntity) => {
+  const latestGlobalAction = actionLogEntity.allIds.slice(-1)[0]
+  return (
+    latestGlobalAction !== undefined
+      ?
+        newTimestamp - actionLogEntity.byId[latestGlobalAction].timestamp
+      :
+        0
   )
 }
 
@@ -96,28 +144,91 @@ const _initializeActionLog = (payload) => {
 // ------------------------------------
 const ACTION_HANDLERS = {
   [UPDATE_UI_STATE] : (state, action) => {
+    // we don't care about the actions as we are
+    // rewinding
     if (action.ignore === true) {
       return state
     }
-    const actionLog = [ ...state.actionLog ]
-    actionLog.push(action)
-    return Object.assign({}, state, { actionLog: actionLog })
+
+    // shorten some refs
+    const actionName = action.payload.name
+    const initialHash = state.initialHash
+    const actionLogEntity = state.actionLogEntity
+
+    // if we need to create initial action
+    // this will come in handy
+    const actionsToBeMerged = {}
+    const actionsToBePushed = []
+
+    // get new object of our specs
+    const newAction = { ...action, timestamp: Date.now(), id: getAutoId() }
+    const diffTime = getDiffTime(newAction.timestamp, actionLogEntity)
+
+    const isFirstUpdate = initialHash[actionName].latest === undefined
+
+    // if this is our first update on this
+    // payload name, create initial action
+    if (isFirstUpdate) {
+      const initialAction = {
+        ...initialHash[actionName].initialAction,
+        timestamp: newAction.timestamp
+      }
+      actionsToBeMerged[initialAction.id] = initialAction
+      actionsToBePushed.push(initialAction.id)
+    }
+
+    actionsToBeMerged[newAction.id] = newAction
+    actionsToBePushed.push(newAction.id)
+
+    // update state
+    const newState = update(state, {
+      actionLogEntity: {
+        byId: { $merge: actionsToBeMerged },
+        allIds: { $push: actionsToBePushed }
+      },
+      initialHash: {
+        [newAction.payload.name]: {
+          latest: { $set: newAction }
+        },
+        diffTimes: { $push: [diffTime] }
+      }
+    })
+    return Object.assign({}, state, newState)
   },
   [MOUNT_UI_STATE] : (state, action) => {
     const actionLog = _initializeActionLog(action.payload)
-    const homeUiKey = action.payload
+    const initialHash = createInitialHash(actionLog)
+
     return Object.assign(
       {},
       state,
       {
-        actionLog: actionLog,
-        initialLog: actionLog,
-        homeUiKey: action.payload.key[0]
+        initialHash: initialHash
       }
     )
   },
   [RESET_ACTION_LOG] :(state, action) => {
-    return Object.assign({}, state, { actionLog: [ ...state.initialLog ] })
+    const initialHash = { ...state.initialHash }
+
+    // set all latest to undefined
+    // diff time will show up in keys as index
+    for (let k in Object.keys(initialHash)) {
+      initialHash[k] && (initialHash[k].latest = undefined)
+    }
+
+    // set diffTimes to empty
+    initialHash.diffTimes = []
+    return Object.assign(
+      {},
+      state,
+      {
+        initialHash: initialHash,
+        actionLogEntity: {
+          byId: {},
+          allIds: []
+        }
+      }
+    )
   }
 }
 
@@ -126,9 +237,11 @@ const ACTION_HANDLERS = {
 // ------------------------------------
 
 const initialState = {
-  actionLog: [],
-  initialLog: [],
-  homeUiKey: null
+  initialHash: {},
+  actionLogEntity: {
+    byId: {},
+    allIds: []
+  }
 }
 
 export default function homeReducer(state = initialState, action) {

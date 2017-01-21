@@ -18,18 +18,6 @@ const Wrapper = styled.section`
   width: 350px;
 `
 
-const Righto = styled.section`
-  background: white;
-  position: fixed;
-  right: 0;
-  display: block;
-  text-align: center;
-  padding: 20px;
-  width: 200px;
-  height: 100%;
-  overflow-y: scroll;
-`
-
 const Title = styled.h1`
   color: black;
 `
@@ -51,7 +39,9 @@ for (let i in goose) {
 
 export const Home = (props) => (
   <FlexBox>
-    <Wrapper onClick={() => props.rewind()}>
+    <Wrapper
+      onClick={() => props.rewind()}
+      onKeyPress={(e) => console.log(e)}>
       <Title>
         {
           goose.map((e, index) => (
@@ -90,24 +80,12 @@ export const Home = (props) => (
         }
       </Title>
     </Wrapper>
-    <Righto>
-      {
-        props.actionLog.map(
-          (e, index) => (
-            <div key={index}>
-              <p>Letter: {goose[e.payload.name]} </p>
-              <p>X: {e.payload.value.x} </p>
-              <p>Y: {e.payload.value.y} </p>
-            </div>
-          )
-        )
-      }
-    </Righto>
   </FlexBox>
 )
 
 Home.propTypes = {
-  actionLog : React.PropTypes.array.isRequired
+  actions : React.PropTypes.array.isRequired,
+  ui: React.PropTypes.object.isRequired
 }
 
-export default ui({ state: state })(Home)
+export default ui({ state: state, key: 'homies' })(Home)
