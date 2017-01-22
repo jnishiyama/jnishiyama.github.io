@@ -8,13 +8,15 @@ export const UPDATE_UI_STATE = '@@redux-ui/UPDATE_UI_STATE'
 export const RESET_ACTION_LOG = 'RESET_ACTION_LOG'
 export const MOUNT_UI_STATE = '@@redux-ui/MOUNT_UI_STATE'
 
-// Just generate autoincrementing ids
-let autoId = 0
-const getAutoId = (index) => {
-  if (index !== undefined) {
-    autoId = index
-  }
-  return autoId++
+// Just generate some uuids
+// courtesy: http://stackoverflow.com/a/2117523/791215
+const getUUID = (autoId) => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+          .replace(/[xy]/g, (c) => {
+            let r = Math.random() * 16 | 0
+            let v = c === 'x' ? r : (r & 0x3 | 0x8)
+            return v.toString(16)
+          })
 }
 
 // ------------------------------------
@@ -37,7 +39,7 @@ export const rewind = () => {
 
     // flip it and reverse it
     const actions = getActions(state).reverse()
-
+    console.log(actions.length)
     // get the Diff times
     const diffTimes = [ ...state.home.initialHash.diffTimes ].reverse()
     const initialHash = state.home.initialHash
@@ -47,8 +49,6 @@ export const rewind = () => {
 
     for (let i in actions) {
       let action = actions[i]
-
-      // console.log(cumulTime)
       if (initialHash[action.payload.name].latest.id === action.id) {
         continue
       }
@@ -68,13 +68,20 @@ export const rewind = () => {
         },
         cumulTime
       )
+      console.log(diffTimes)
     }
 
     // finally reset Action log
-    dispatch(
-      {
-        type    : RESET_ACTION_LOG
-      }
+    setTimeout(
+      () => {
+        // dispatch redux ui action
+        dispatch(
+          {
+            type    : RESET_ACTION_LOG
+          }
+        )
+      },
+      cumulTime
     )
   }
 }
@@ -96,7 +103,7 @@ const _initializeActionLog = (payload) => {
       {
         type: UPDATE_UI_STATE,
         payload: {
-          key: 'homies',
+          key: ['homies'],
           name: e,
           value: {
             x: payload.defaults[e].x,
@@ -117,8 +124,8 @@ const createInitialHash = (actions) => {
       (action) => {
         return {
           [action.payload.name]: {
-            latest: undefined,
-            initialAction: { ...action, id: getAutoId() }
+            latest: null,
+            initialAction: { ...action, id: getUUID() }
           },
           diffTimes: []
         }
@@ -161,11 +168,10 @@ const ACTION_HANDLERS = {
     const actionsToBePushed = []
 
     // get new object of our specs
-    const newAction = { ...action, timestamp: Date.now(), id: getAutoId() }
+    const newAction = { ...action, timestamp: Date.now(), id: getUUID() }
     const diffTime = getDiffTime(newAction.timestamp, actionLogEntity)
 
-    const isFirstUpdate = initialHash[actionName].latest === undefined
-
+    const isFirstUpdate = initialHash[actionName].latest === undefined || initialHash[actionName].latest === null
     // if this is our first update on this
     // payload name, create initial action
     if (isFirstUpdate) {
@@ -196,16 +202,20 @@ const ACTION_HANDLERS = {
     return Object.assign({}, state, newState)
   },
   [MOUNT_UI_STATE] : (state, action) => {
-    const actionLog = _initializeActionLog(action.payload)
-    const initialHash = createInitialHash(actionLog)
+    if (Object.keys(state.initialHash).length === 0 &&
+        state.initialHash.constructor === Object) {
+      const actionLog = _initializeActionLog(action.payload)
+      const initialHash = createInitialHash(actionLog)
 
-    return Object.assign(
-      {},
-      state,
-      {
-        initialHash: initialHash
-      }
-    )
+      return Object.assign(
+        {},
+        state,
+        {
+          initialHash: initialHash
+        }
+      )
+    }
+    else return state
   },
   [RESET_ACTION_LOG] :(state, action) => {
     const initialHash = { ...state.initialHash }
@@ -213,7 +223,7 @@ const ACTION_HANDLERS = {
     // set all latest to undefined
     // diff time will show up in keys as index
     for (let k in Object.keys(initialHash)) {
-      initialHash[k] && (initialHash[k].latest = undefined)
+      initialHash[k] && (initialHash[k].latest = null)
     }
 
     // set diffTimes to empty
