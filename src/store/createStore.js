@@ -3,7 +3,9 @@ import thunk from 'redux-thunk'
 import { browserHistory } from 'react-router'
 import makeRootReducer from './reducers'
 import { updateLocation } from './location'
-import { autoRehydrate } from 'redux-persist'
+import { autoRehydrate, persistStore } from 'redux-persist'
+import immutableTransform from 'redux-persist-transform-immutable'
+import localForage from 'localForage'
 
 export default (initialState = {}) => {
   // ======================================================
@@ -41,6 +43,7 @@ export default (initialState = {}) => {
 
   // To unsubscribe, invoke `store.unsubscribeHistory()` anytime
   store.unsubscribeHistory = browserHistory.listen(updateLocation(store))
+  persistStore(store, { storage: localForage, transforms: [immutableTransform()] })
 
   if (module.hot) {
     module.hot.accept('./reducers', () => {

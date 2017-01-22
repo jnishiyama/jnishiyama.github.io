@@ -39,7 +39,6 @@ export const rewind = () => {
 
     // flip it and reverse it
     const actions = getActions(state).reverse()
-    console.log(actions.length)
     // get the Diff times
     const diffTimes = [ ...state.home.initialHash.diffTimes ].reverse()
     const initialHash = state.home.initialHash
@@ -68,7 +67,6 @@ export const rewind = () => {
         },
         cumulTime
       )
-      console.log(diffTimes)
     }
 
     // finally reset Action log
